@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: ai-core-skills <command> [options]
+
+Commands:
+  install     Copy or symlink skills to a tool-specific location
+  list        Print skill names in this repository
+  validate    Run scripts/validate-skills.sh
+
+Install options:
+  --target <name>     cursor | cursor-project | claude | claude-project | codex | all
+  --dest <path>       Override default destination
+  --project-root <p>  Required for *-project targets (defaults to cwd)
+  --link              Symlink instead of copy (when dest is writable)
+  --dry-run           Print actions without writing
+
+Environment:
+  AI_CORE_SKILLS_ROOT   Repository root containing skills/ (auto-detected from script location)
+
+Examples:
+  ai-core-skills install --target cursor
+  ai-core-skills install --target claude --link
+  ai-core-skills install --target cursor-project --project-root .
+  ai-core-skills install --target all --dry-run
+EOF
+}
+
+resolve_root() {
+  if [[ -n "${AI_CORE_SKILLS_ROOT:-}" ]]; then
+    echo "$AI_CORE_SKILLS_ROOT"
+    return
+  fi
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  echo "$(cd "$script_dir/.." && pwd)"
+}
+
+default_dest() {
+  local target="$1"
+  local project_root="${2:-}"
+  case "$target" in
+    cursor) echo "${HOME}/.cursor/skills-ai-core" ;;
+    cursor-project) echo "${project_root}/.cursor/skills/ai-core" ;;
+    claude) echo "${HOME}/.claude/skills/ai-core" ;;
+    claude-project) echo "${project_root}/.claude/skills/ai-core" ;;
+    codex) echo "${HOME}/.codex/skills/ai-core" ;;
+    *) echo "unknown target: $target" >&2; exit 1 ;;
+  esac
+}
+
+install_one() {
+  local target="$1"
+  local dest="$2"
+  local link="${3:-0}"
+  local dry="${4:-0}"
+  local root="$5"
+  local src="${root}/skills"
+
+  if [[ ! -d "$src" ]]; then
+    echo "error: skills directory not found at $src" >&2
+    exit 1
+  fi
+
+  echo "[$target] $src -> $dest"
+
+  if [[ "$dry" == "1" ]]; then
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$dest")"
+  if [[ "$link" == "1" ]]; then
+    if [[ -e "$dest" || -L "$dest" ]]; then
+      rm -rf "$dest"
+    fi
+    ln -s "$src" "$dest"
+  elif command -v rsync >/dev/null 2>&1; then
+    mkdir -p "$dest"
+    rsync -a --delete "${src}/" "${dest}/"
+  else
+    rm -rf "$dest"
+    mkdir -p "$dest"
+    cp -a "${src}/." "${dest}/"
+  fi
+}
+
+cmd_install() {
+  local target="cursor"
+  local dest=""
+  local project_root="$(pwd)"
+  local link=0
+  local dry=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target) target="$2"; shift 2 ;;
+      --dest) dest="$2"; shift 2 ;;
+      --project-root) project_root="$2"; shift 2 ;;
+      --link) link=1; shift ;;
+      --dry-run) dry=1; shift ;;
+      -h|--help) usage; exit 0 ;;
+      *) echo "unknown option: $1" >&2; exit 1 ;;
+    esac
+  done
+
+  local root
+  root="$(resolve_root)"
+
+  install_targets() {
+    local t="$1"
+    local d
+    if [[ -n "$dest" ]]; then
+      d="$dest"
+    else
+      d="$(default_dest "$t" "$project_root")"
+    fi
+    install_one "$t" "$d" "$link" "$dry" "$root"
+  }
+
+  case "$target" in
+    all)
+      for t in cursor claude codex; do
+        install_targets "$t"
+      done
+      ;;
+    cursor-project|claude-project)
+      if [[ -z "$project_root" ]]; then
+        echo "error: --project-root required for $target" >&2
+        exit 1
+      fi
+      install_targets "$target"
+      ;;
+    cursor|claude|codex)
+      install_targets "$target"
+      ;;
+    *)
+      echo "error: unknown target '$target'" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+cmd_list() {
+  local root
+  root="$(resolve_root)"
+  find "${root}/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+}
+
+cmd_validate() {
+  local root
+  root="$(resolve_root)"
+  exec "${root}/scripts/validate-skills.sh" "$root"
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    install) cmd_install "$@" ;;
+    list) cmd_list ;;
+    validate) cmd_validate ;;
+    -h|--help|"") usage ;;
+    *) echo "unknown command: $cmd" >&2; usage; exit 1 ;;
+  esac
+}
+
+main "$@"
