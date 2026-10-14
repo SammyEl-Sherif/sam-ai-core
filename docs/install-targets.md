@@ -4,8 +4,8 @@
 
 | Target | Default destination | Override |
 | --- | --- | --- |
-| `cursor` | `~/.cursor/skills-ai-core` | `--dest` |
-| `cursor-project` | `<repo>/.cursor/skills/ai-core` | `--dest`, requires `--project-root` |
+| `cursor` | `~/.cursor/skills/<skill-name>/` (one dir per skill) | `--dest` (base directory; default `~/.cursor/skills`) |
+| `cursor-project` | `<repo>/.cursor/skills/<skill-name>/` | `--dest`, requires `--project-root` |
 | `claude` | `~/.claude/skills/ai-core` | `--dest` |
 | `claude-project` | `<repo>/.claude/skills/ai-core` | `--dest`, requires `--project-root` |
 | `codex` | `~/.codex/skills/ai-core` | `--dest` |
@@ -20,7 +20,11 @@
 
 ## Idempotency
 
-Install uses `rsync -a --delete` when available, otherwise `cp -R`. Re-running install refreshes the destination to match this repository.
+For **cursor** and **cursor-project**, each skill syncs into its own subdirectory under the destination base. Re-running install refreshes only ai-core skill folders; other entries under `~/.cursor/skills/` are left untouched.
+
+For **claude** and **codex**, the whole `skills/` tree is mirrored to a single destination directory (`rsync -a --delete` when available, otherwise `cp -R`).
+
+See [cursor.md](cursor.md) for Cursor-specific setup on a Mac or Cloud Agent machine.
 
 ## Project knowledge base
 
