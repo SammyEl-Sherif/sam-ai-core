@@ -10,8 +10,11 @@ chmod +x bin/ai-core-skills scripts/validate-skills.sh
 ./bin/ai-core-skills validate
 ./bin/ai-core-skills list
 
-# Install to Cursor (user-level)
+# Install to Cursor (user-level; one folder per skill under ~/.cursor/skills/)
 ./bin/ai-core-skills install --target cursor
+
+# Symlink from this clone (best while developing skills)
+./bin/ai-core-skills install --target cursor --link
 
 # Install into the current repo for Cursor
 ./bin/ai-core-skills install --target cursor-project --project-root .
@@ -20,7 +23,7 @@ chmod +x bin/ai-core-skills scripts/validate-skills.sh
 ./bin/ai-core-skills install --target all --dry-run
 ```
 
-See [docs/install-targets.md](docs/install-targets.md) for paths and environment variables.
+See [docs/install-targets.md](docs/install-targets.md) for paths and environment variables. For Cursor on a Mac, see [docs/cursor.md](docs/cursor.md).
 
 ## Layout
 
@@ -36,7 +39,7 @@ See [docs/install-targets.md](docs/install-targets.md) for paths and environment
 
 Workflow skills adapted from the Projectflow kit (see [docs/first-pr-scope.md](docs/first-pr-scope.md)):
 
-`autopilot`, `board`, `capture`, `execute-plan`, `ingest-context`, `lgtm`, `new-project`, `plan-project`, `todo`, `wrap-session`
+`autopilot`, `board`, `capture`, `execute-plan`, `ingest-context`, `lgtm`, `new-project`, `notion-task`, `plan-project`, `todo`, `wrap-session`
 
 ## Contributing
 

@@ -42,8 +42,8 @@ default_dest() {
   local target="$1"
   local project_root="${2:-}"
   case "$target" in
-    cursor) echo "${HOME}/.cursor/skills-ai-core" ;;
-    cursor-project) echo "${project_root}/.cursor/skills/ai-core" ;;
+    cursor) echo "${HOME}/.cursor/skills" ;;
+    cursor-project) echo "${project_root}/.cursor/skills" ;;
     claude) echo "${HOME}/.claude/skills/ai-core" ;;
     claude-project) echo "${project_root}/.claude/skills/ai-core" ;;
     codex) echo "${HOME}/.codex/skills/ai-core" ;;
@@ -86,6 +86,49 @@ install_one() {
   fi
 }
 
+# Cursor discovers ~/.cursor/skills/<name>/ and <repo>/.cursor/skills/<name>/.
+# Install each repo skill into its own directory without deleting unrelated skills.
+install_cursor_skills() {
+  local target="$1"
+  local dest_base="$2"
+  local link="${3:-0}"
+  local dry="${4:-0}"
+  local root="$5"
+  local src="${root}/skills"
+
+  if [[ ! -d "$src" ]]; then
+    echo "error: skills directory not found at $src" >&2
+    exit 1
+  fi
+
+  local skill_dir name skill_dest
+  for skill_dir in "${src}"/*; do
+    [[ -d "$skill_dir" ]] || continue
+    name="$(basename "$skill_dir")"
+    skill_dest="${dest_base}/${name}"
+    echo "[$target] ${skill_dir} -> ${skill_dest}"
+
+    if [[ "$dry" == "1" ]]; then
+      continue
+    fi
+
+    mkdir -p "$dest_base"
+    if [[ "$link" == "1" ]]; then
+      if [[ -e "$skill_dest" || -L "$skill_dest" ]]; then
+        rm -rf "$skill_dest"
+      fi
+      ln -s "$skill_dir" "$skill_dest"
+    elif command -v rsync >/dev/null 2>&1; then
+      mkdir -p "$skill_dest"
+      rsync -a --delete "${skill_dir}/" "${skill_dest}/"
+    else
+      rm -rf "$skill_dest"
+      mkdir -p "$skill_dest"
+      cp -a "${skill_dir}/." "${skill_dest}/"
+    fi
+  done
+}
+
 cmd_install() {
   local target="cursor"
   local dest=""
@@ -116,7 +159,14 @@ cmd_install() {
     else
       d="$(default_dest "$t" "$project_root")"
     fi
-    install_one "$t" "$d" "$link" "$dry" "$root"
+    case "$t" in
+      cursor|cursor-project)
+        install_cursor_skills "$t" "$d" "$link" "$dry" "$root"
+        ;;
+      *)
+        install_one "$t" "$d" "$link" "$dry" "$root"
+        ;;
+    esac
   }
 
   case "$target" in
@@ -146,7 +196,12 @@ cmd_install() {
 cmd_list() {
   local root
   root="$(resolve_root)"
-  find "${root}/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+  local d name
+  for d in "${root}/skills"/*; do
+    [[ -d "$d" ]] || continue
+    name="$(basename "$d")"
+    echo "$name"
+  done | sort
 }
 
 cmd_validate() {
