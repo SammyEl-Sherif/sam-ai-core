@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts"
+  }
+}

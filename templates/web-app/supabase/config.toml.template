@@ -1,0 +1,7 @@
+
+[db.migrations]
+schema_paths = [
+  "./schemas/00_extensions.sql",
+  "./schemas/10_profiles.sql",
+  "./schemas/*.sql",
+]

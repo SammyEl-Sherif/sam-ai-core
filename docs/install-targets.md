@@ -26,6 +26,6 @@ For **claude** and **codex**, the whole `skills/` tree is mirrored to a single d
 
 See [cursor.md](cursor.md) for Cursor-specific setup on a Mac or Cloud Agent machine.
 
-## Project knowledge base
+## Web apps
 
-Skills assume per-project files at `.ai-core/kb/<slug>/` (overview, architecture, decisions, sessions). Seed from `templates/project-kb/` when creating a project.
+Use the **web-app** skill and `skills/web-app/scripts/scaffold.sh` to create new Next.js projects; see the repository [README](../README.md).
